@@ -1,0 +1,18 @@
+tenant_id: "magic-tour"
+name: "Magic Tour Colombia"
+whatsapp_instance: "magic-tour"
+main_agency_phone: "+573002394612"
+advisor_group_jid: "120363000000000000@g.us"
+privacy_policy_url: "https://magictourcolombia.com/es/politica-de-tratamiento-de-datos-personales"
+
+office_hours:
+  timezone: "America/Bogota"
+  start_hour: 8
+  end_hour: 18
+  include_sundays_and_holidays: true
+
+languages:
+  supported:
+    - "es"
+    - "en"
+  default: "es"

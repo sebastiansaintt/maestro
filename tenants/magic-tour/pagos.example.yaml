@@ -1,0 +1,13 @@
+# Plantilla de medios de pago (Copiar a pagos.yaml — gitignored)
+is_demo: true
+holder_name: "MAGIC TOUR COLOMBIA S.A.S (DEMO)"
+nit: "900.000.000-0 (DEMO)"
+accounts:
+  - method: "Bancolombia Ahorros"
+    number: "000-000000-00 (DEMO)"
+  - method: "Nequi"
+    number: "300 000 0000 (DEMO)"
+  - method: "Nu Colombia"
+    number: "00000000 (DEMO)"
+instructions_es: "Una vez realices la transferencia, envíanos foto o PDF del comprobante por este mismo chat para que un asesor valide el ingreso y confirme tu reserva."
+instructions_en: "Once you complete the transfer, please send a photo or PDF of the receipt in this chat so an advisor can verify it and confirm your booking."

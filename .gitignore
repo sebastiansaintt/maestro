@@ -1,0 +1,44 @@
+# Secretos y configuración sensible (NUNCA subir a internet)
+.env
+.env.*
+!.env.example
+**/pagos.yaml
+!**/pagos.example.yaml
+
+# Base de datos y almacenamiento local
+*.db
+*.db-shm
+*.db-wal
+*.sqlite3
+*.sqlite3-shm
+*.sqlite3-wal
+.eval_tmp/
+data/
+evolution_instances/
+evolution_store/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+ENV/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+dist/
+build/
+*.egg-info/
+
+# Sistema operativo e IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+.agents/
+
+# Documentación interna, PRD y estrategias confidenciales
+docs/
+PRD.md
