@@ -1,11 +1,11 @@
-# Maestro 🌴⚡
+# Maestro
 
 > **Infraestructura de IA Conversacional y Ventas 24/7 en WhatsApp para Agencias y Operadores Turísticos.**  
 > *Convierte conversaciones en reservas confirmadas con precisión quirúrgica, cero alucinaciones de precios y blindaje financiero.*
 
 ---
 
-## 🧭 ¿Qué es Maestro?
+## ¿Qué es Maestro?
 
 **Maestro** es un asistente virtual multi-tenant para WhatsApp diseñado específicamente para agencias de viajes receptivas y operadores turísticos. A diferencia de un chatbot genérico o un LLM sin restricciones, Maestro combina la fluidez del lenguaje natural con **compuertas deterministas de negocio**, asegurando que cada cotización, política o dato de pago esté estrictamente anclado al catálogo oficial de la agencia.
 
@@ -16,7 +16,7 @@ Su arquitectura resuelve de raíz los problemas más costosos del sector:
 
 ---
 
-## 💼 ¿Para Quién Es?
+## ¿Para Quién Es?
 
 - **Operadores Turísticos Receptivos:** Agencias que comercializan experiencias de naturaleza, caminatas arqueológicas (ej. *Ciudad Perdida / Teyuna*), parques nacionales (*PNN Tayrona*) o excursiones costeras y fluviales.
 - **DMCs y Agencias de Viajes Locales:** Empresas con catálogos dinámicos que necesitan atender a turistas nacionales y extranjeros en **español e inglés** sin contratar turnos rotativos de madrugada.
@@ -24,7 +24,7 @@ Su arquitectura resuelve de raíz los problemas más costosos del sector:
 
 ---
 
-## ✨ Características Principales y Atractivo Comercial
+## Características Principales y Atractivo Comercial
 
 ### 1. Atención Imparable 24/7 en Español e Inglés
 Atiende consultas en tiempo real sin importar la diferencia horaria de los viajeros internacionales, manteniendo siempre el contexto de la conversación y respondiendo con tono cálido, profesional y local.
@@ -54,7 +54,7 @@ Los asesores siempre tienen la última palabra. Si un asesor escribe manualmente
 
 ---
 
-## 📊 Panel Ejecutivo y Métricas en Tiempo Real
+## Panel Ejecutivo y Métricas en Tiempo Real
 
 Maestro incluye un motor de métricas comerciales y endpoints protegidos con autenticación:
 
@@ -63,7 +63,7 @@ Maestro incluye un motor de métricas comerciales y endpoints protegidos con aut
 
 ---
 
-## 🛠️ Perfil Técnico y Arquitectura
+## Perfil Técnico y Arquitectura
 
 Diseñado bajo principios de código limpio, pruebas rigurosas (TDD) y observabilidad para producción:
 
@@ -80,7 +80,7 @@ Diseñado bajo principios de código limpio, pruebas rigurosas (TDD) y observabi
 
 ---
 
-## 🚀 ¿Por Dónde Escala? (Estrategia de Crecimiento)
+## ¿Por Dónde Escala? (Estrategia de Crecimiento)
 
 1. **Aislamiento Multi-Tenant Limpio:**  
    Cada nueva agencia se integra como una carpeta independiente (`tenants/nombre-agencia/`) con su propio `config.yaml`, cuentas bancarias y base de tours, permitiendo operar decenas de agencias en una sola instancia sin mezcla de datos.
@@ -93,35 +93,6 @@ Diseñado bajo principios de código limpio, pruebas rigurosas (TDD) y observabi
 
 4. **Multi-Canal:**  
    Arquitectura desacoplada en el orquestador (`ConversationOrchestrator`), permitiendo reutilizar el mismo motor de conocimiento para Instagram DMs, webchat o Telegram.
-
----
-
-## ⚡ Cómo Desplegar en Entorno Local
-
-```bash
-# 1. Clonar el repositorio
-git clone https://github.com/sebastiansaintt/maestro.git
-cd maestro
-
-# 2. Configurar entorno virtual e instalar dependencias
-python -m venv .venv
-source .venv/bin/activate  # En Windows: .\.venv\Scripts\activate
-pip install -e .
-
-# 3. Configurar variables de entorno
-cp .env.example .env
-# Completa tus credenciales de Gemini y Evolution API en .env
-
-# 4. Levantar pasarela de WhatsApp
-docker compose up -d
-
-# 5. Ejecutar la suite de validación y evaluación
-pytest -v
-python scripts/eval.py
-
-# 6. Iniciar el servidor
-uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-```
 
 ---
 
