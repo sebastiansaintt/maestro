@@ -1,6 +1,6 @@
 services:
   evolution-api:
-    image: atendai/evolution-api:v2.1.1
+    image: evoapicloud/evolution-api:v2.3.4
     container_name: maestro-evolution-api
     restart: unless-stopped
     ports:
@@ -24,7 +24,10 @@ services:
       - WEBHOOK_GLOBAL_URL=http://host.docker.internal:8000/webhook/evolution
       - WEBHOOK_GLOBAL_WEBHOOK_BY_EVENTS=false
       - WEBHOOK_EVENTS_MESSAGES_UPSERT=true
-      - LOG_LEVEL=ERROR,WARN
+      - LOG_LEVEL=ERROR,WARN,INFO
+      - QRCODE_LIMIT=30
+      - CONFIG_SESSION_PHONE_CLIENT=Maestro
+      - CONFIG_SESSION_PHONE_NAME=Chrome
     volumes:
       - evolution_instances:/evolution/instances
     depends_on:
