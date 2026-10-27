@@ -14,6 +14,21 @@ logger = get_logger()
 _COST_PER_1M_INPUT_USD = 0.15
 _COST_PER_1M_OUTPUT_USD = 0.60
 
+DEFAULT_FALLBACK_MODELS: tuple[str, ...] = (
+    "gemini-3.1-flash-lite-preview",
+    "gemini-3.5-flash-lite",
+    "gemini-3-flash-preview",
+    "gemini-3.5-flash",
+    "gemini-3.6-flash",
+)
+
+# En Google AI Studio v1beta, los modelos 3.5 / 3.6 / 3.7 se cuelgan si reciben thinkingConfig explícito
+_MODELS_WITHOUT_THINKING_CONFIG: tuple[str, ...] = (
+    "gemini-3.5-",
+    "gemini-3.6-",
+    "gemini-3.7-",
+)
+
 _TRANSCRIPTION_INSTRUCTION = (
     "Transcribe literalmente esta nota de voz en su idioma original. "
     "Devuelve únicamente la transcripción, sin comentarios ni traducciones. "
@@ -21,33 +36,53 @@ _TRANSCRIPTION_INSTRUCTION = (
 )
 
 
+def _supports_thinking_config(model_name: str) -> bool:
+    lowered = model_name.lower()
+    return not any(lowered.startswith(prefix) for prefix in _MODELS_WITHOUT_THINKING_CONFIG)
+
+
 class GeminiLLMProvider:
-    """Async Gemini client using REST v1beta with low reasoning mode and RED telemetry."""
+    """Async Gemini client with automatic waterfall model fallback and RED telemetry."""
 
     def __init__(
         self,
         api_key: str,
-        model: str = "gemini-3.8-flash",
+        model: str = "gemini-3.1-flash-lite",
+        fallback_models: tuple[str, ...] | list[str] = DEFAULT_FALLBACK_MODELS,
         reasoning_effort: str = "low",
         base_url: str = "https://generativelanguage.googleapis.com/v1beta",
-        timeout_seconds: float = 25.0,
+        timeout_seconds: float = 12.0,
         transport: httpx.AsyncBaseTransport | None = None,
     ) -> None:
         self._api_key = api_key
         self._model = model
+        deduped: list[str] = [model]
+        for candidate in fallback_models:
+            clean = candidate.strip()
+            if clean and clean not in deduped:
+                deduped.append(clean)
+        self._model_chain: tuple[str, ...] = tuple(deduped)
         self._reasoning_effort = reasoning_effort.upper()
         self._base_url = base_url.rstrip("/")
         self._timeout_seconds = timeout_seconds
         self._transport = transport
 
-    async def _generate_content(
+    async def _call_single_model(
         self,
         *,
-        payload: dict[str, Any],
+        model_name: str,
+        base_payload: dict[str, Any],
         tenant_id: str,
         operation: str,
     ) -> LLMResponse:
-        url = f"{self._base_url}/models/{self._model}:generateContent"
+        gen_cfg = dict(base_payload.get("generationConfig") or {})
+        if _supports_thinking_config(model_name):
+            gen_cfg["thinkingConfig"] = {"thinkingLevel": self._reasoning_effort}
+        else:
+            gen_cfg.pop("thinkingConfig", None)
+
+        payload = {**base_payload, "generationConfig": gen_cfg}
+        url = f"{self._base_url}/models/{model_name}:generateContent"
         started = time.perf_counter()
         try:
             async with httpx.AsyncClient(
@@ -68,13 +103,13 @@ class GeminiLLMProvider:
             logger.error(
                 "llm_inference_failed",
                 tenantId=tenant_id,
-                model=self._model,
+                model=model_name,
                 operation=operation,
                 errorType=type(exc).__name__,
                 durationMs=duration_ms,
             )
             raise LLMProviderError(
-                f"Gemini network error for model {self._model}: {type(exc).__name__}"
+                f"Gemini network error for model {model_name}: {type(exc).__name__}"
             ) from exc
 
         duration_ms = round((time.perf_counter() - started) * 1000, 2)
@@ -87,13 +122,13 @@ class GeminiLLMProvider:
             logger.error(
                 "llm_inference_failed",
                 tenantId=tenant_id,
-                model=self._model,
+                model=model_name,
                 operation=operation,
                 statusCode=response.status_code,
                 durationMs=duration_ms,
             )
             raise LLMProviderError(
-                f"Gemini API returned HTTP {response.status_code} for model {self._model}"
+                f"Gemini API returned HTTP {response.status_code} for model {model_name}"
             )
 
         data = response.json()
@@ -107,7 +142,7 @@ class GeminiLLMProvider:
 
         reply_text = "\n".join(reply_parts).strip()
         if not reply_text:
-            raise LLMProviderError(f"Gemini returned empty text for model {self._model}")
+            raise LLMProviderError(f"Gemini returned empty text for model {model_name}")
 
         usage = data.get("usageMetadata") or {}
         tokens_in = int(usage.get("promptTokenCount") or 0)
@@ -121,7 +156,7 @@ class GeminiLLMProvider:
         logger.info(
             "llm_inference_completed",
             tenantId=tenant_id,
-            model=self._model,
+            model=model_name,
             operation=operation,
             tokensIn=tokens_in,
             tokensOut=tokens_out,
@@ -134,9 +169,39 @@ class GeminiLLMProvider:
             tokens_in=tokens_in,
             tokens_out=tokens_out,
             cost_usd=cost_usd,
-            model=self._model,
+            model=model_name,
             duration_ms=duration_ms,
         )
+
+    async def _generate_content(
+        self,
+        *,
+        payload: dict[str, Any],
+        tenant_id: str,
+        operation: str,
+    ) -> LLMResponse:
+        last_error: LLMProviderError | None = None
+        for idx, model_name in enumerate(self._model_chain):
+            try:
+                if idx > 0:
+                    logger.warning(
+                        "llm_waterfall_fallback_attempt",
+                        tenantId=tenant_id,
+                        attempt=idx + 1,
+                        fallbackModel=model_name,
+                    )
+                return await self._call_single_model(
+                    model_name=model_name,
+                    base_payload=payload,
+                    tenant_id=tenant_id,
+                    operation=operation,
+                )
+            except LLMProviderError as exc:
+                last_error = exc
+                continue
+
+        assert last_error is not None
+        raise last_error
 
     async def generate_reply(self, request: LLMRequest) -> LLMResponse:
         contents: list[dict[str, Any]] = []
@@ -151,7 +216,6 @@ class GeminiLLMProvider:
             "generationConfig": {
                 "temperature": 0.2,
                 "responseMimeType": "application/json",
-                "thinkingConfig": {"thinkingLevel": self._reasoning_effort},
             },
         }
         return await self._generate_content(
@@ -173,7 +237,6 @@ class GeminiLLMProvider:
             ],
             "generationConfig": {
                 "temperature": 0.0,
-                "thinkingConfig": {"thinkingLevel": self._reasoning_effort},
             },
         }
         return await self._generate_content(

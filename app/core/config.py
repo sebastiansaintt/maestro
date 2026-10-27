@@ -17,7 +17,10 @@ class Settings(BaseSettings):
     tenant_default_id: str = "magic-tour"
 
     gemini_api_key: str = ""
-    gemini_model: str = "gemini-3.8-flash"
+    gemini_model: str = "gemini-3.1-flash-lite"
+    gemini_fallback_models: str = (
+        "gemini-3.1-flash-lite-preview,gemini-3.5-flash-lite,gemini-3-flash-preview,gemini-3.5-flash,gemini-3.6-flash"
+    )
     gemini_reasoning_effort: str = "low"
     debounce_seconds: float = 4.0
     db_path: str = "maestro.db"

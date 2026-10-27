@@ -102,6 +102,7 @@ async def test_gemini_provider_raises_domain_error_without_leaking_api_key_on_ht
     provider = GeminiLLMProvider(
         api_key="super_secret_gemini_api_key_999",
         model="gemini-3.8-flash",
+        fallback_models=(),
         transport=httpx.MockTransport(handler),
     )
 
@@ -115,3 +116,53 @@ async def test_gemini_provider_raises_domain_error_without_leaking_api_key_on_ht
         )
 
     assert "super_secret_gemini_api_key_999" not in str(exc_info.value)
+
+
+@pytest.mark.asyncio
+async def test_gemini_waterfall_retries_fallback_models_and_omits_thinking_config_for_3_5_3_6() -> None:
+    attempted_models: list[tuple[str, dict]] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        model_name = request.url.path.split("/models/")[1].split(":")[0]
+        body = json.loads(request.content.decode("utf-8"))
+        attempted_models.append((model_name, body))
+
+        if model_name == "gemini-3-flash-preview":
+            return httpx.Response(503, json={"error": {"message": "Overloaded"}})
+        if model_name == "gemini-3.5-flash":
+            raise httpx.ReadTimeout("Timed out")
+        return httpx.Response(
+            200,
+            json={
+                "candidates": [{"content": {"parts": [{"text": '{"reply":"Respuesta desde fallback"}'}]}}],
+                "usageMetadata": {"promptTokenCount": 100, "candidatesTokenCount": 20},
+            },
+        )
+
+    provider = GeminiLLMProvider(
+        api_key="secret_key",
+        model="gemini-3-flash-preview",
+        fallback_models=("gemini-3.5-flash", "gemini-3.1-flash-lite"),
+        reasoning_effort="low",
+        transport=httpx.MockTransport(handler),
+    )
+
+    response = await provider.generate_reply(
+        LLMRequest(
+            tenant_id="magic-tour",
+            system_prompt="System",
+            user_message="<MENSAJE_USUARIO>Hola</MENSAJE_USUARIO>",
+        )
+    )
+
+    assert [m for m, _ in attempted_models] == [
+        "gemini-3-flash-preview",
+        "gemini-3.5-flash",
+        "gemini-3.1-flash-lite",
+    ]
+    # 3.5 must omit thinkingConfig so Google AI Studio does not hang
+    assert "thinkingConfig" in attempted_models[0][1]["generationConfig"]
+    assert "thinkingConfig" not in attempted_models[1][1]["generationConfig"]
+    assert "thinkingConfig" in attempted_models[2][1]["generationConfig"]
+    assert response.model == "gemini-3.1-flash-lite"
+    assert "Respuesta desde fallback" in response.text

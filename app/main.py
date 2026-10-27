@@ -70,9 +70,15 @@ def create_app(
 
     resolved_llm = llm_provider
     if resolved_llm is None and settings.gemini_api_key:
+        fallback_list = [
+            m.strip()
+            for m in settings.gemini_fallback_models.split(",")
+            if m.strip()
+        ]
         resolved_llm = GeminiLLMProvider(
             api_key=settings.gemini_api_key,
             model=settings.gemini_model,
+            fallback_models=fallback_list,
             reasoning_effort=settings.gemini_reasoning_effort,
         )
 
