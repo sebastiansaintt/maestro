@@ -123,3 +123,34 @@ async def test_webhook_supports_extended_text_and_ignores_non_message_events() -
         assert fake_whatsapp.sent_messages[0].text == "Eco [magic-tour]: ¿Tienen salidas a Minca mañana?"
 
 
+@pytest.mark.asyncio
+async def test_webhook_deduplicates_duplicate_message_ids() -> None:
+    fake_whatsapp = FakeWhatsAppProvider()
+    app = create_app(whatsapp_provider=fake_whatsapp, allow_default_llm=False)
+
+    payload = {
+        "event": "messages.upsert",
+        "instance": "magic-tour",
+        "data": {
+            "key": {
+                "remoteJid": "573152052580@s.whatsapp.net",
+                "fromMe": False,
+                "id": "DUP-MSG-001",
+            },
+            "message": {
+                "conversation": "Hola",
+            },
+        },
+    }
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        r1 = await client.post("/webhook/evolution", json=payload)
+        r2 = await client.post("/webhook/evolution", json=payload)
+
+    assert r1.json() == {"status": "processed", "tenant_id": "magic-tour"}
+    assert r2.json() == {"status": "ignored", "reason": "duplicate_message"}
+    assert len(fake_whatsapp.sent_messages) == 1
+
+
+

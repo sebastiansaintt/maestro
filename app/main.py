@@ -113,6 +113,7 @@ def create_app(
     app.state.debouncer = debouncer
     app.state.debounce_delay_seconds = debounce_delay_seconds
     app.state.repository = repository
+    app.state.seen_message_ids = SentMessageRegistry(max_size=4096)
     app.state.report_api_token = (
         report_api_token if report_api_token is not None else settings.report_api_token
     )
@@ -223,15 +224,26 @@ def create_app(
         ).strip()
 
         if key.get("fromMe") is True:
+            if message_id and message_id in request.app.state.seen_message_ids:
+                log.info("webhook_ignored", tenantId=tenant_id, reason="duplicate_message", messageId=message_id)
+                return {"status": "ignored", "reason": "duplicate_message"}
             result = await request.app.state.orchestrator.handle_from_me_message(
                 tenant_id=tenant_id,
                 sender_number=recipient_number,
                 text=text,
                 message_id=message_id,
             )
+            if message_id and result.get("reason") != "bot_echo":
+                request.app.state.seen_message_ids.add(message_id)
             if result.get("status") == "ignored":
                 log.info("webhook_ignored", tenantId=tenant_id, reason=result.get("reason"))
             return result
+
+        if message_id:
+            if message_id in request.app.state.seen_message_ids:
+                log.info("webhook_ignored", tenantId=tenant_id, reason="duplicate_message", messageId=message_id)
+                return {"status": "ignored", "reason": "duplicate_message"}
+            request.app.state.seen_message_ids.add(message_id)
 
         audio_obj = message_obj.get("audioMessage")
         if recipient_number and isinstance(audio_obj, dict):

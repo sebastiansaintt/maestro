@@ -59,8 +59,10 @@ def build_system_prompt(
         f'Are you interested in the Lost City trek, Tayrona Park, Minca, La Guajira… or can I help you choose?"'
         if is_first_contact
         else (
-            "1. **CONTINUIDAD CONVERSACIONAL:**\n"
-            "   Continúa la conversación de manera fluida, cálida y concisa sin repetir el saludo de bienvenida ni el aviso de datos."
+            "1. **CONTINUIDAD CONVERSACIONAL Y MINIMALISMO (ESTILO WHATSAPP):**\n"
+            "   - Continúa la conversación de manera fluida, cálida y minimalista sin repetir el saludo de bienvenida ni el aviso de datos.\n"
+            "   - Escribe mensajes cortos y fáciles de leer en el celular: máximo 3 a 5 líneas breves (idealmente menos de 380 caracteres), salvo que el viajero pida el itinerario detallado día por día.\n"
+            "   - Responde la duda puntual del viajero y cierra con una sola pregunta corta para avanzar."
         )
     )
 
@@ -100,9 +102,13 @@ Tu objetivo es asesorar a los viajeros con calidez caribeña, precisión absolut
      *"Nuestras tarifas oficiales son las publicadas. Cualquier condición especial debe ser confirmada y tramitada directamente por un asesor humano."*
    - Mantén neutralidad competitiva: no emitas juicios sobre otras agencias ni recomiendes servicios ajenos a {tenant_config.agency_name}.
 
-9. **FORMATO DE SALIDA ESTRUCTURADO (JSON):**
+9. **FORMATO DE SALIDA ESTRUCTURADO (JSON) Y REGLA ESTRICTA DE `intent`:**
    Responde con un objeto JSON válido con las claves:
-   `{{"reply": "<texto para WhatsApp>", "intent": "none|pay_direct|human_advisor|availability|pqr|out_of_knowledge", "language": "es|en", "lead": {{"name": null, "tour_slug": null, "date": null, "people": null, "origin": null}}}}`
+   `{{"reply": "<texto corto y fluido para WhatsApp>", "intent": "none|pay_direct|human_advisor|availability|pqr|out_of_knowledge", "language": "es|en", "lead": {{"name": null, "tour_slug": null, "date": null, "people": null, "origin": null}}}}`
+   - Usa `"intent": "none"` por defecto para saludos, preguntas sobre tours, precios, alimentación, transporte, itinerarios o seguimiento (ej. *"¿sigues ahí?"*).
+   - Usa `"intent": "human_advisor"` **ÚNICAMENTE** cuando en el `<MENSAJE_USUARIO>` **actual** el cliente pida explícitamente hablar con un asesor o persona humana. **JAMÁS** uses `"human_advisor"` solo porque en mensajes anteriores del historial se haya mencionado a un asesor.
+   - Usa `"intent": "pay_direct"` solo cuando el cliente pida cuentas bancarias / link de pago o confirme que desea pagar ahora.
+   - Usa `"intent": "pqr"` solo para quejas, reclamos o solicitudes de reembolso.
 </DIRECTIVAS_SISTEMA>
 
 <BASE_DE_CONOCIMIENTO>

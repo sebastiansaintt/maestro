@@ -25,6 +25,15 @@ class EvolutionWhatsAppProvider(WhatsAppProvider):
 
     async def send_text(self, message: OutboundTextMessage) -> str | None:
         log = get_logger()
+        if message.recipient_number.startswith("120363000000000000@"):
+            log.info(
+                "whatsapp_send_skipped_placeholder_group",
+                provider="evolution_api",
+                instance=message.instance,
+                recipientNumber=message.recipient_number,
+            )
+            return None
+
         url = f"{self._base_url}/message/sendText/{message.instance}"
         headers = {
             "apikey": self._api_key,

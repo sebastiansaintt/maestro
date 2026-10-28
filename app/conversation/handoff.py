@@ -7,7 +7,11 @@ from app.conversation.office_hours import OfficeHoursPolicy
 from app.core.logging import get_logger
 from app.db.models import SessionRecord
 from app.db.repository import SessionRepository
-from app.providers.whatsapp.base import OutboundTextMessage, WhatsAppProvider
+from app.providers.whatsapp.base import (
+    OutboundTextMessage,
+    WhatsAppProvider,
+    WhatsAppProviderError,
+)
 
 logger = get_logger()
 
@@ -118,7 +122,7 @@ class HandoffService:
                         request_id=request_id,
                     )
                 )
-            except WhatsAppProviderError as exc:
+            except (WhatsAppProviderError, Exception) as exc:
                 logger.warning(
                     "advisor_group_alert_failed",
                     tenantId=tenant_id,

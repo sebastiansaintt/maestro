@@ -7,7 +7,7 @@ import pytest
 from app.conversation.handoff import HandoffService
 from app.conversation.office_hours import OfficeHoursPolicy
 from app.db.repository import SessionRepository
-from app.providers.whatsapp.base import OutboundTextMessage
+from app.providers.whatsapp.base import OutboundTextMessage, WhatsAppProviderError
 
 BOGOTA = ZoneInfo("America/Bogota")
 GROUP_JID = "120363000000000000@g.us"
@@ -123,3 +123,39 @@ async def test_handoff_off_hours_with_receipt_is_high_priority_and_warns_8am(
     assert "8:00 a.m." in result.tourist_notice  # RF-14b, en inglés
     events = await repo.list_events("magic-tour")
     assert events[0].is_off_hours is True
+
+
+@pytest.mark.asyncio
+async def test_handoff_is_resilient_when_advisor_group_alert_returns_http_400(
+    tmp_path: Path,
+) -> None:
+    class FailingGroupWhatsApp(FakeWhatsApp):
+        async def send_text(self, message: OutboundTextMessage) -> str | None:
+            if message.recipient_number.endswith("@g.us"):
+                raise WhatsAppProviderError("Evolution API returned HTTP 400", status_code=400)
+            return await super().send_text(message)
+
+    repo = SessionRepository(db_path=tmp_path / "h3.db")
+    await repo.init_db()
+    wa = FailingGroupWhatsApp()
+    service = HandoffService(repository=repo, whatsapp_provider=wa, office_hours=OfficeHoursPolicy())
+
+    now = datetime(2026, 10, 21, 10, 0, tzinfo=BOGOTA)
+    session = await _session_with_lead(repo, now)
+
+    result = await service.trigger(
+        tenant_id="magic-tour",
+        instance="magic-tour",
+        advisor_group_jid=GROUP_JID,
+        session=session,
+        phone_number="573001112233",
+        reason="human_advisor",
+        language="es",
+        request_id="req-h3",
+        now=now,
+    )
+
+    assert "asesor" in result.tourist_notice
+    updated = await repo.get_session(session.id)
+    assert updated.status == "ESPERANDO_ASESOR"
+

@@ -55,6 +55,44 @@ _RECEIPT_KEYWORDS: tuple[str, ...] = (
     "transfer",
 )
 
+_ADVISOR_REQUEST_KEYWORDS: tuple[str, ...] = (
+    "asesor",
+    "humano",
+    "humana",
+    "persona",
+    "agente",
+    "operador",
+    "encargado",
+    "gerente",
+    "llamar",
+    "llamada",
+    "comunicame",
+    "comunícame",
+    "comunicar",
+    "pasame",
+    "pásame",
+    "pasar con",
+    "atencion personal",
+    "atención personal",
+    "corporativo",
+    "privado",
+    "private",
+    "advisor",
+    "human",
+    "real person",
+    "agent",
+    "representative",
+    "manager",
+    "talk to someone",
+    "speak to someone",
+    "connect me",
+)
+
+
+def _user_explicitly_requests_advisor(text: str) -> bool:
+    lowered = (text or "").lower()
+    return any(kw in lowered for kw in _ADVISOR_REQUEST_KEYWORDS)
+
 _AUDIO_NOTICES = {
     "too_long": {
         "es": "Tu nota de voz supera los 90 segundos 🙏. ¿Me la envías más corta o me escribes tu consulta?",
@@ -540,6 +578,18 @@ class ConversationOrchestrator:
         )
 
         parsed = _parse_llm_output(llm_response.text)
+        effective_intent = parsed.intent
+        if (
+            effective_intent == "human_advisor"
+            and not _user_explicitly_requests_advisor(input_guard.clean_text)
+        ):
+            logger.info(
+                "human_advisor_intent_suppressed",
+                tenantId=tenant_id,
+                userText=input_guard.clean_text[:120],
+            )
+            effective_intent = "none"
+
         merged_lead = _merge_lead(current_lead, parsed.lead)
         merged_lead["language"] = parsed.language
 
@@ -617,14 +667,14 @@ class ConversationOrchestrator:
                 tenant_id=tenant_id,
                 session_id=session.id,
                 event_type="TOKEN_USAGE",
-                payload={"model": llm_response.model, "kind": "conversation", "intent": parsed.intent},
+                payload={"model": llm_response.model, "kind": "conversation", "intent": effective_intent},
                 tokens_in=llm_response.tokens_in,
                 tokens_out=llm_response.tokens_out,
                 cost_usd=llm_response.cost_usd,
                 is_off_hours=is_off_hours,
                 timestamp=now_dt,
             )
-            if parsed.intent == "out_of_knowledge":
+            if effective_intent == "out_of_knowledge":
                 # RF-05: solo se OFRECE asesor; se registra para enriquecer el knowledge (métrica)
                 await self._repository.record_event(
                     tenant_id=tenant_id,
@@ -646,7 +696,7 @@ class ConversationOrchestrator:
 
         # 2. Handoff to human advisor (RF-11..RF-14b)
         if (
-            parsed.intent in {"human_advisor", "pqr"}
+            effective_intent in {"human_advisor", "pqr"}
             and self._repository is not None
             and session is not None
         ):
@@ -661,7 +711,7 @@ class ConversationOrchestrator:
                 advisor_group_jid=tenant_config.advisor_group_jid,
                 session=session,
                 phone_number=sender_number,
-                reason=parsed.intent,
+                reason=effective_intent,
                 language=parsed.language,
                 request_id=request_id,
                 now=now_dt,
@@ -679,7 +729,7 @@ class ConversationOrchestrator:
             "conversation_turn_completed",
             tenantId=tenant_id,
             isFirstContact=is_first_contact,
-            intent=parsed.intent,
+            intent=effective_intent,
             outputApproved=output_guard.approved,
             tokensIn=llm_response.tokens_in,
             tokensOut=llm_response.tokens_out,
