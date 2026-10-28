@@ -217,6 +217,16 @@ class ConversationOrchestrator:
         if clean == "#activar":
             await self._repository.update_session(session.id, status="ACTIVA", clear_pause=True)
             logger.info("advisor_command_executed", tenantId=tenant_id, sessionId=session.id, command="activar")
+            if message_id:
+                try:
+                    await self._whatsapp_provider.delete_message(
+                        instance=tenant_id,
+                        remote_jid=sender_number,
+                        message_id=message_id,
+                        from_me=True,
+                    )
+                except Exception:
+                    pass
             return {"status": "advisor_command", "command": "activar"}
 
         # "#pausar" o cualquier mensaje manual del asesor: el bot se silencia 24 h (RF-13)
@@ -227,6 +237,16 @@ class ConversationOrchestrator:
         )
         if clean == "#pausar":
             logger.info("advisor_command_executed", tenantId=tenant_id, sessionId=session.id, command="pausar")
+            if message_id:
+                try:
+                    await self._whatsapp_provider.delete_message(
+                        instance=tenant_id,
+                        remote_jid=sender_number,
+                        message_id=message_id,
+                        from_me=True,
+                    )
+                except Exception:
+                    pass
             return {"status": "advisor_command", "command": "pausar"}
 
         if text:

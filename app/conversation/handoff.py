@@ -109,14 +109,22 @@ class HandoffService:
         )
 
         if advisor_group_jid:
-            await self._whatsapp_provider.send_text(
-                OutboundTextMessage(
-                    instance=instance,
-                    recipient_number=advisor_group_jid,
-                    text=advisor_alert_text,
-                    request_id=request_id,
+            try:
+                await self._whatsapp_provider.send_text(
+                    OutboundTextMessage(
+                        instance=instance,
+                        recipient_number=advisor_group_jid,
+                        text=advisor_alert_text,
+                        request_id=request_id,
+                    )
                 )
-            )
+            except WhatsAppProviderError as exc:
+                logger.warning(
+                    "advisor_group_alert_failed",
+                    tenantId=tenant_id,
+                    advisorGroupJid=advisor_group_jid,
+                    error=str(exc),
+                )
 
         tourist_notice = self._build_tourist_notice(
             reason=reason,

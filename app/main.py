@@ -59,6 +59,7 @@ def create_app(
     debounce_delay_seconds: float = 0.0,
     run_background_jobs: bool = False,
     report_api_token: str | None = None,
+    allow_default_llm: bool = True,
 ) -> FastAPI:
     configure_logging(settings.log_level)
 
@@ -69,7 +70,7 @@ def create_app(
     tracked_wa = TrackingWhatsAppProvider(raw_wa, SentMessageRegistry())
 
     resolved_llm = llm_provider
-    if resolved_llm is None and settings.gemini_api_key:
+    if resolved_llm is None and allow_default_llm and settings.gemini_api_key:
         fallback_list = [
             m.strip()
             for m in settings.gemini_fallback_models.split(",")

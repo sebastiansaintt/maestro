@@ -35,6 +35,12 @@ class WhatsAppProvider(ABC):
         """Descarga el contenido multimedia (audio/imagen/documento) de un mensaje entrante."""
         raise NotImplementedError
 
+    async def delete_message(
+        self, instance: str, remote_jid: str, message_id: str, from_me: bool = True
+    ) -> bool:
+        """Elimina un mensaje para todos en el chat si el proveedor lo soporta."""
+        return False
+
 
 class SentMessageRegistry:
     """Recuerda los IDs de los mensajes enviados por el bot para distinguirlos de los del asesor (fromMe)."""
@@ -71,3 +77,8 @@ class TrackingWhatsAppProvider(WhatsAppProvider):
 
     async def get_media_base64(self, instance: str, message_id: str) -> MediaPayload:
         return await self._inner.get_media_base64(instance, message_id)
+
+    async def delete_message(
+        self, instance: str, remote_jid: str, message_id: str, from_me: bool = True
+    ) -> bool:
+        return await self._inner.delete_message(instance, remote_jid, message_id, from_me)

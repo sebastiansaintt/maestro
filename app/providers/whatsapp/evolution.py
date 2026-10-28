@@ -134,3 +134,23 @@ class EvolutionWhatsAppProvider(WhatsAppProvider):
         body = response.json()
         mimetype = str(body.get("mimetype") or "application/octet-stream").split(";")[0].strip()
         return MediaPayload(base64_data=str(body.get("base64") or ""), mimetype=mimetype)
+
+    async def delete_message(
+        self, instance: str, remote_jid: str, message_id: str, from_me: bool = True
+    ) -> bool:
+        """Elimina el mensaje para todos mediante Evolution API."""
+        if not message_id or not remote_jid:
+            return False
+        clean_jid = remote_jid if "@" in remote_jid else f"{remote_jid}@s.whatsapp.net"
+        url = f"{self._base_url}/chat/deleteMessageForEveryone/{instance}"
+        payload = {
+            "id": message_id,
+            "fromMe": from_me,
+            "remoteJid": clean_jid,
+        }
+        try:
+            async with httpx.AsyncClient(timeout=self._timeout_seconds, transport=self._transport) as client:
+                res = await client.delete(url, headers={"apikey": self._api_key}, json=payload)
+                return res.status_code in (200, 201)
+        except Exception:
+            return False

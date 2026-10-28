@@ -16,7 +16,7 @@ class FakeWhatsAppProvider(WhatsAppProvider):
 @pytest.mark.asyncio
 async def test_webhook_echoes_incoming_user_text_message() -> None:
     fake_whatsapp = FakeWhatsAppProvider()
-    app = create_app(whatsapp_provider=fake_whatsapp)
+    app = create_app(whatsapp_provider=fake_whatsapp, allow_default_llm=False)
 
     payload = {
         "event": "messages.upsert",
@@ -87,7 +87,7 @@ async def test_webhook_ignores_messages_from_me() -> None:
 @pytest.mark.asyncio
 async def test_webhook_supports_extended_text_and_ignores_non_message_events() -> None:
     fake_whatsapp = FakeWhatsAppProvider()
-    app = create_app(whatsapp_provider=fake_whatsapp)
+    app = create_app(whatsapp_provider=fake_whatsapp, allow_default_llm=False)
 
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
