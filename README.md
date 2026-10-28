@@ -24,6 +24,14 @@ Su arquitectura resuelve de raíz los problemas más costosos del sector:
 
 ---
 
+## Casos de Uso y Flujo Comercial
+
+Maestro cubre el ciclo de atención comercial de punta a punta, coordinando la interacción del turista, el motor de inteligencia y el equipo comercial humano:
+
+![Diagrama de Casos de Uso](diagrams/diagrama_casos_uso.png)
+
+---
+
 ## Características Principales y Atractivo Comercial
 
 ### 1. Atención Imparable 24/7 en Español e Inglés
@@ -54,6 +62,23 @@ Los asesores siempre tienen la última palabra. Si un asesor escribe manualmente
 
 ---
 
+## Blindaje de Seguridad y Guardrails en 4 Capas
+
+Para garantizar confiabilidad institucional y mitigar riesgos de jailbreak, gaslighting o fuga de información, Maestro implementa una arquitectura de defensa en profundidad:
+
+![Esquema de Seguridad y Guardrails](diagrams/esquema_seguridad.png)
+
+1. **Capa 1 — Filtros Perimetrales e Ingress (Anti Denial-of-Wallet):**  
+   Rechazo estricto de textos mayores a 1.200 caracteres y audios de más de 90 segundos. El Agrupador de 4 segundos consolida ráfagas antes de invocar la IA, protegiendo costos de inferencia.
+2. **Capa 2 — Aislamiento Multi-Tenant y Catálogo Estricto:**  
+   Inyección contextual basada exclusivamente en fichas Markdown (`tenants/{id}/knowledge/`). La base de datos y la configuración están aisladas por tenant para evitar mezclas de catálogos y proteger la marca.
+3. **Capa 3 — Hardening de Prompt y Anti-Jailbreak:**  
+   Los mensajes del turista se encapsulan en delimitadores XML `<MENSAJE_USUARIO>`, neutralizando inyecciones de instrucciones. El System Prompt tiene identidad inmutable y secreto operativo absoluto.
+4. **Capa 4 — Blindaje Financiero & Handoff Seguro:**  
+   Payment Gate determinista con checklist de 5 datos. Válidador regex pre-envío para impedir que el LLM invente precios o rebajas. Cero confirmación autónoma de transferencias bancarias y escalamiento inmediato al equipo humano.
+
+---
+
 ## Panel Ejecutivo y Métricas en Tiempo Real
 
 Maestro incluye un motor de métricas comerciales y endpoints protegidos con autenticación:
@@ -65,7 +90,11 @@ Maestro incluye un motor de métricas comerciales y endpoints protegidos con aut
 
 ## Perfil Técnico y Arquitectura
 
-Diseñado bajo principios de código limpio, pruebas rigurosas (TDD) y observabilidad para producción:
+Maestro está diseñado bajo principios de desacoplamiento, pruebas continuas (TDD) y observabilidad para producción.
+
+### Topología General del Sistema
+
+![Diagrama de Arquitectura General](diagrams/diagrama_arquitectura_general.png)
 
 | Capa | Tecnología / Herramienta | Propósito |
 |---|---|---|
@@ -76,7 +105,13 @@ Diseñado bajo principios de código limpio, pruebas rigurosas (TDD) y observabi
 | **Base de Conocimiento** | Markdown Jerárquico Multi-Tenant | Separación estricta de catálogos (`tenants/{id}/knowledge/`). |
 | **Guardrails de Seguridad** | Delimitadores XML + Validador regex | Protección anti-prompt injection, prevención de fugas y bloqueo de descuentos inventados. |
 | **Observabilidad** | Logs estructurados JSON (`structlog`) | Trazabilidad por `requestId`, tiempos RED y contabilidad de tokens/costos. |
-| **Calidad y Regresión** | Pytest (46 tests unitarios/integración) + Suite de Evaluación (42 casos críticos) | 100% de cobertura en compuertas de seguridad, precios exactos y flujos comerciales. |
+| **Calidad y Regresión** | Pytest (46 tests) + Suite de Evaluación (42 casos críticos) | 100% de cobertura en compuertas de seguridad, precios exactos y flujos comerciales. |
+
+### Ciclo de Vida E2E y Contrato de Comunicación
+
+Secuencia completa de procesamiento desde el ingreso del mensaje hasta la entrega y alertas al equipo comercial:
+
+![Diagrama de Comunicación y Contrato](diagrams/diagrama_comunicacion_contrato.png)
 
 ---
 
